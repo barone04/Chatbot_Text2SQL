@@ -117,7 +117,7 @@ streamlit run agent.py
 
 ---
 
-## 📬 ContactContact
+## 📬 Contact
 
 Feel free to send ideas, bug reports, or contributions:
 
