@@ -14,7 +14,7 @@ from dataset_store import (
     extract_table_from_image,
     get_dataset,
     import_csv_dataset,
-    import_image_dataset,
+    import_dataframe_dataset,
     import_json_dataset,
     import_multi_json_dataset,
     list_datasets,
@@ -278,8 +278,13 @@ def render_sidebar(datasets: list[dict], active_dataset_id: str | None) -> None:
                     ext = Path(uploaded_img.name).suffix.lstrip(".").lower()
                     mime_type = mime_map.get(ext, "image/png")
                     try:
-                        with st.spinner("Dang OCR bang tu anh..."):
-                            preview = extract_table_from_image(image_bytes, mime_type)
+                        # Cache OCR result to avoid re-running on Import click
+                        cache_key = f"ocr_cache_{uploaded_img.name}_{len(image_bytes)}"
+                        if cache_key not in st.session_state:
+                            with st.spinner("Dang OCR bang tu anh..."):
+                                st.session_state[cache_key] = extract_table_from_image(image_bytes, mime_type)
+                        preview = st.session_state[cache_key]
+
                         st.dataframe(preview.head(5), use_container_width=True, hide_index=True, height=150)
                         dataset_name = st.text_input(
                             "Name",
@@ -287,11 +292,14 @@ def render_sidebar(datasets: list[dict], active_dataset_id: str | None) -> None:
                             key="img-dataset-name",
                         )
                         if st.button("Import", key="import-img", use_container_width=True):
-                            dataset = import_image_dataset(
+                            dataframe = st.session_state.pop(cache_key)
+                            description = "Dataset duoc import tu anh bang qua EasyOCR."
+                            dataset = import_dataframe_dataset(
+                                dataframe=dataframe,
                                 display_name=dataset_name,
-                                image_bytes=image_bytes,
-                                mime_type=mime_type,
+                                source_type="image",
                                 source_file=uploaded_img.name,
+                                description=description,
                             )
                             update_active_chat_dataset(dataset["dataset_id"])
                             st.rerun()

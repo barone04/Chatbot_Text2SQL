@@ -19,7 +19,7 @@ from dataset_store import DB_PATH, list_chat_tables, quote_identifier
 load_dotenv()
 load_dotenv(find_dotenv())
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini/gemini-2.5-flash")
+MODEL_NAME = os.getenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
 
 ACTIVE_TABLES: list[str] | None = None
 LAST_QUERY_CONTEXT: dict[str, Any] = {
@@ -181,9 +181,9 @@ def run_sql_query(sql_query: str) -> str:
 
 class ListTablesTool(BaseTool):
     name: str = "list_tables"
-    description: str = "Danh sach cac bang duoc phep su dung trong dataset hien tai."
+    description: str = "Danh sach cac bang duoc phep su dung trong dataset hien tai. Truyen bat ky gia tri nao."
 
-    def _run(self) -> str:
+    def _run(self, placeholder: str = "") -> str:
         available_tables = get_active_tables()
         if not available_tables:
             return "Khong co bang nao kha dung."

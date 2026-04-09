@@ -625,49 +625,49 @@ def list_recent_ingestion_jobs(limit: int = 8) -> list[dict[str, Any]]:
 
 
 def extract_table_from_image(image_bytes: bytes, mime_type: str) -> pd.DataFrame:
-    """Use Gemini Vision to extract table data from an image."""
-    import google.generativeai as genai
+    """Extract table data from an image using img2table + EasyOCR (no API key needed)."""
+    from img2table.document import Image as Img2TableImage
+    from img2table.ocr import EasyOCR
 
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        raise ValueError("Thieu GEMINI_API_KEY hoac GOOGLE_API_KEY trong .env")
+    # Write image bytes to a temp file (img2table needs a file path)
+    import tempfile
+    suffix = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}.get(mime_type, ".png")
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(image_bytes)
+        tmp_path = tmp.name
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    try:
+        ocr = EasyOCR(lang=["vi", "en"])
+        doc = Img2TableImage(src=tmp_path)
+        tables = doc.extract_tables(ocr=ocr, implicit_rows=True, implicit_columns=True)
 
-    b64_data = base64.b64encode(image_bytes).decode("utf-8")
-    image_part = {"mime_type": mime_type, "data": b64_data}
+        if not tables:
+            raise ValueError("Khong tim thay bang nao trong anh.")
 
-    prompt = (
-        "Extract ALL data from the table in this image. "
-        "If the table has multi-level headers (parent columns spanning multiple sub-columns), "
-        "flatten them by combining parent and child names with underscore, e.g. 'Revenue_Q1'. "
-        "Return the result as a JSON array of objects. Each object is one row. "
-        "Keys are the flattened column names. Values are the cell values (use numbers for numeric cells). "
-        "Return ONLY the JSON array, no markdown, no explanation."
-    )
+        # Pick the largest table (most cells)
+        best = max(tables, key=lambda t: len(t.df) * len(t.df.columns) if t.df is not None else 0)
+        dataframe = best.df
 
-    response = model.generate_content([prompt, image_part])
-    raw_text = response.text.strip()
+        if dataframe is None or dataframe.empty:
+            raise ValueError("Bang trong anh khong co du lieu.")
 
-    # Strip markdown code fences if present
-    if raw_text.startswith("```"):
-        raw_text = re.sub(r"^```\w*\n?", "", raw_text)
-        raw_text = re.sub(r"\n?```$", "", raw_text)
+        # Use first row as header if it looks like text labels
+        first_row = dataframe.iloc[0]
+        numeric_count = sum(1 for v in first_row if _is_numeric(str(v).strip()))
+        if numeric_count < len(first_row) / 2:
+            dataframe.columns = [str(v).strip() for v in dataframe.iloc[0]]
+            dataframe = dataframe.iloc[1:].reset_index(drop=True)
 
-    records = json.loads(raw_text)
-    if not isinstance(records, list) or not records:
-        raise ValueError("Gemini khong tra ve du lieu bang hop le.")
-
-    dataframe = pd.DataFrame(records)
-    return sanitize_dataframe(dataframe)
+        return sanitize_dataframe(dataframe)
+    finally:
+        os.unlink(tmp_path)
 
 
 def import_image_dataset(
     display_name: str, image_bytes: bytes, mime_type: str, source_file: str | None
 ) -> dict[str, Any]:
     dataframe = extract_table_from_image(image_bytes, mime_type)
-    description = "Dataset duoc import tu anh bang qua Gemini Vision OCR."
+    description = "Dataset duoc import tu anh bang qua EasyOCR."
     return import_dataframe_dataset(
         dataframe=dataframe,
         display_name=display_name,
