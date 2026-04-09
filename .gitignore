@@ -1,0 +1,37 @@
+# Environment & secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data & database
+data/data/sales.db
+data/samples/*.json
+
+# Logs
+src/crew.log.txt
+src/chat_log/
+
+# Claude
+.claude/
+src/.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug scripts
+src/debug*.py
+src/test_*.py

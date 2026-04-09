@@ -1,22 +1,39 @@
 extract_data:
   description: >
-    Trích xuất dữ liệu cần thiết cho truy vấn: {query}
+    You are working with dataset "{dataset_name}".
+    Dataset description: {dataset_description}
+    Allowed tables: {allowed_tables}
+    Schema snapshot:
+    {schema_summary}
+
+    First inspect the available tables and schema, then write the minimum SQL needed to answer:
+    {query}
+
+    Do not use tables outside the allowed list.
+    If the question cannot be answered from the current dataset, say what is missing.
   expected_output: >
-    Kết quả cơ sở dữ liệu cho truy vấn.
+    The SQL result needed to answer the question.
   agent: sql_dev
 
 analyze_data:
   description: >
-    Phân tích dữ liệu từ cơ sở dữ liệu và viết phân tích cho: {query}
+    Based only on the extracted data for dataset "{dataset_name}", answer the user question:
+    {query}
+
+    Requirements:
+    - Write in Vietnamese
+    - Start with a direct answer
+    - Include the key numbers
+    - Keep it concise and business-friendly
   expected_output: >
-    Văn bản phân tích chi tiết.
+    A concise Vietnamese answer with the key findings.
   agent: data_analyst
   context: [extract_data]
 
 write_report:
   description: >
-    Viết bản tóm tắt phân tích trong vòng chưa đầy 100 từ.
+    Turn the analysis into a short summary under 100 words.
   expected_output: >
-    Báo cáo giảm giá
+    A short executive summary.
   agent: report_writer
   context: [analyze_data]
