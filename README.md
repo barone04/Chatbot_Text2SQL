@@ -1,10 +1,3 @@
-# Hyperlogy
-
-![Giao diện Chatbot](img/hyper.png)
-
----
-
-
 ## 🤖 Chatbot SVM
 
 Chatbot SVM is a chatbot application that integrates Streamlit, Gemini model and Crewai agent to answer questions from a SQLite3 database that was originally built from CSV files containing product and invoice data.
